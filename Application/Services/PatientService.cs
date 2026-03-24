@@ -231,11 +231,11 @@ namespace Application.Services
                 Price = t.Appointement.Doctor.Price.ToString(),
                 PhoneNumber = t.Appointement.Doctor.User.PhoneNumber,
                 Day = t.Appointement.Days.ToString(),
-                FinalPrice = t.PriceAfterCoupon.ToString(),
+                FinalPrice = t.Appointement.Booking.Price.ToString(),
                 Image = t.Appointement.Doctor.User.ImageUrl,
                 StartTime = t.Appointement.Times.FirstOrDefault()?.StartTime,
                 EndTime = t.Appointement.Times.FirstOrDefault()?.EndTime,
-                BookingStatus = t.Status.ToString()
+                BookingStatus = t.Appointement.Booking.Status.ToString()
             });
         }
     }

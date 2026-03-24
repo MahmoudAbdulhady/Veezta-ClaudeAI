@@ -237,5 +237,10 @@ namespace Infrastrucutre.Repositories
                 .FirstOrDefaultAsync(d => d.UserId == userId);
             return doctor?.DoctorId;
         }
+
+        public Task<(IEnumerable<Appointement>, int)> GetDoctorApptAsync(PaginationAndSearchDTO request, string doctorId)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

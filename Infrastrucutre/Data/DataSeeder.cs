@@ -20,31 +20,62 @@ namespace Infrastrucutre.Data
 
         private static async Task SeedRoles(RoleManager<IdentityRole> roleManager)
         {
-            if (!await roleManager.RoleExistsAsync("Admin"))
-            {
-                var role = new IdentityRole("Admin");
-                await roleManager.CreateAsync(role);
+
+            var roles = new List<string>
+    {
+        "Admin",
+        "Doctor",
+        "Patient"
+    };
+
+            foreach (var roleName in roles)
+                {
+                    if (!await roleManager.RoleExistsAsync(roleName))
+                    {
+                        var role = new IdentityRole(roleName);
+                        await roleManager.CreateAsync(role);
+                    }
+                }
             }
-        }
+        
 
         private static async Task SeedAdminUser(UserManager<CustomUser> userManager)
         {
-            if (await userManager.FindByEmailAsync("admin@example.com") == null)
+            var adminEmail = "veeztadmin@test.com";
+            var adminPassword = "Admin@123"; // change as you like
+
+            var existingUser = await userManager.FindByEmailAsync(adminEmail);
+
+            if (existingUser == null)
             {
-                var user = new CustomUser
+                var adminUser = new CustomUser
                 {
-                    FirstName = "AdminFirstName",
-                    LastName = "AdminLastName",
-                    FullName = " ",
-                    Email = "admin@gmail.com",
-                    // Set other necessary properties, like FirstName, LastName etc.
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    FirstName = "Veezta",
+                    LastName = "Admin",
+                    FullName = "Veezta Admin",
+                    DateOfBirth = new DateTime(1999, 9, 24),
+                    Gender = Gender.Male,
+                    ImageUrl = "Admin",
+                    AccountRole = AccountRole.Admin,
+                    EmailConfirmed = true
                 };
 
-                var result = await userManager.CreateAsync(user, "Admin@2023");
+                var createResult = await userManager.CreateAsync(adminUser, adminPassword);
 
-                if (result.Succeeded)
+                if (!createResult.Succeeded)
                 {
-                    await userManager.AddToRoleAsync(user, "Admin");
+                    var errors = string.Join(" | ", createResult.Errors.Select(e => e.Description));
+                    throw new Exception($"Failed to create admin user: {errors}");
+                }
+
+                var roleResult = await userManager.AddToRoleAsync(adminUser, AccountRole.Admin.ToString());
+
+                if (!roleResult.Succeeded)
+                {
+                    var errors = string.Join(" | ", roleResult.Errors.Select(e => e.Description));
+                    throw new Exception($"Failed to assign admin role: {errors}");
                 }
             }
         }

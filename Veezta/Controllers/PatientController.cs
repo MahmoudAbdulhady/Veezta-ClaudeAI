@@ -90,7 +90,7 @@ namespace Veezta.Controllers
         /// </summary>
         [Authorize(Roles = "Patient")]
         [HttpPost("BookAppointment")]
-        public async Task<IActionResult> BookAppointment([FromForm] CreateBookingDTO bookingModel)
+        public async Task<IActionResult> BookAppointment([FromForm] CreateBookingDTO     bookingModel)
         {
             // Derive the patient's ID from their JWT claim — never trust the client to send it
             var patientId = User.FindFirstValue(ClaimTypes.NameIdentifier);

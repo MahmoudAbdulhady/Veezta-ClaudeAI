@@ -28,7 +28,7 @@ namespace Infrastrucutre
           new Specialization { SpecializationId = 3, SpecializationName = "Cardiology" },
           new Specialization { SpecializationId = 4, SpecializationName = "Dermatology" },
           new Specialization { SpecializationId = 5, SpecializationName = "Surgeon" },
-    
+
           new Specialization { SpecializationId = 6, SpecializationName = "Hematologists" },
           new Specialization { SpecializationId = 7, SpecializationName = "Pathologists" },
           new Specialization { SpecializationId = 8, SpecializationName = "Pediatricians" },
@@ -47,13 +47,14 @@ namespace Infrastrucutre
                 new CustomUser
                 {
                     AccountRole = AccountRole.Admin,
-                    Email= "VeeztaAdmin@gmail.com",
-                    FirstName="Veezta",
-                    LastName="Admin",
-                    FullName="VezetaAdmin",
-                    DateOfBirth =new DateTime(1999/9/24),
-                    Gender= Gender.Male,
-                    ImageUrl="Admin",
+                    Email = "VeeztaAdmin@gmail.com",
+                    FirstName = "Veezta",
+                    LastName = "Admin",
+                    FullName = "VezetaAdmin",
+                    DateOfBirth = new DateTime(1999 / 9 / 24),
+                    Gender = Gender.Male,
+                    ImageUrl = "Admin",
+                    
                 });
 
             //releation Between Doctor and CustomUser (Idenitiy Table) One To One 
