@@ -64,5 +64,18 @@ namespace Infrastrucutre.Repositories
             return await _veeztaDbContext.Specializations
                               .FirstOrDefaultAsync(s => s.SpecializationName == name);
         }
+
+        public async Task<IEnumerable<Specialization>> GetAllAsync()
+        {
+            return await _veeztaDbContext.Specializations
+                .OrderBy(s => s.SpecializationName)
+                .ToListAsync();
+        }
+
+        public async Task DeleteAsync(Specialization specialization)
+        {
+            _veeztaDbContext.Specializations.Remove(specialization);
+            await _veeztaDbContext.SaveChangesAsync();
+        }
     }
 }

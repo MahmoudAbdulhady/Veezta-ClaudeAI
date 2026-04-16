@@ -9,6 +9,6 @@ namespace Domain.DTOS
     public class DayScheduleDTO
     {
         public string Day { get; set; }
-        public List<string> TimeSlots { get; set; }
+        public List<TimeSlotInfoDTO> TimeSlots { get; set; }
     }
 }

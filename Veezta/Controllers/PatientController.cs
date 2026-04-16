@@ -132,5 +132,38 @@ namespace Veezta.Controllers
             var bookings = await _patientService.GetPatientSpecificBookingsAsync(patientId);
             return Ok(bookings);
         }
+
+        /// <summary>
+        /// Returns the profile of the currently authenticated patient.
+        /// </summary>
+        [Authorize(Roles = "Patient")]
+        [HttpGet("MyProfile")]
+        public async Task<IActionResult> GetMyProfile()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var profile = await _patientService.GetMyProfileAsync(userId);
+            return Ok(profile);
+        }
+
+        /// <summary>
+        /// Updates the profile of the currently authenticated patient.
+        /// </summary>
+        [Authorize(Roles = "Patient")]
+        [HttpPut("UpdateProfile")]
+        public async Task<IActionResult> UpdateProfile([FromForm] UpdateUserProfileDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            await _patientService.UpdateMyProfileAsync(userId, model);
+            return Ok("Profile updated successfully.");
+        }
     }
 }

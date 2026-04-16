@@ -8,6 +8,7 @@ namespace Domain.DTOS
 {
     public class PatientBookingDTO
     {
+        public int BookingId { get; set; }
         public string DoctorName { get; set; }
         public string Price { get; set; }
         public string Specailization { get; set; }

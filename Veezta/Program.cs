@@ -118,13 +118,13 @@ builder.Logging.AddSerilog(logger);
 
 var app = builder.Build();
 
-//using (var scope = app.Services.CreateScope())
-//{
-//    var services = scope.ServiceProvider;
-//    var userManager = services.GetRequiredService<UserManager<CustomUser>>();
-//    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-//    await DataSeeder.SeedData(userManager, roleManager);
-//}
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var userManager = services.GetRequiredService<UserManager<CustomUser>>();
+    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+    await DataSeeder.SeedData(userManager, roleManager);
+}
 
 // Global exception handler: catches all unhandled exceptions and returns a safe JSON
 // error response so internal details are never leaked to the client.

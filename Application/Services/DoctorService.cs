@@ -6,6 +6,7 @@ using Domain.Enums;
 using Domain.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 namespace Application.Services
 {
     public class DoctorService : IDoctorService
@@ -75,6 +76,7 @@ namespace Application.Services
             var selectedBookings = doctorBookings
                 .Select(group => new DoctorBookingsDTO
             {
+                BookingId = group.Booking?.BookingId ?? 0,
                 PatientName = group.Booking?.Patient.FullName ?? "Unknown",
                 Age = CalculateAge(group.Booking?.Patient?.DateOfBirth).ToString() ?? "Unknown",
                 Day = group.Days.ToString(),
@@ -249,6 +251,79 @@ namespace Application.Services
         public async Task<int?> GetDoctorIdByUserIdAsync(string userId)
         {
             return await _doctorRepository.GetDoctorIdByUserIdAsync(userId);
+        }
+
+        public async Task<bool> DoctorRegisterAsync(DoctorRegisterDTO model)
+        {
+            return await _adminService.AddDocotorAsync(model);
+        }
+
+        public async Task<IEnumerable<SpecializationDTO>> GetSpecializationsAsync()
+        {
+            return await _adminService.GetAllSpecializationsAsync();
+        }
+
+        /// <summary>
+        /// Returns the profile information of the currently authenticated doctor.
+        /// </summary>
+        public async Task<UserProfileDTO> GetMyProfileAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                throw new Exception("User not found.");
+
+            return new UserProfileDTO
+            {
+                FullName = user.FullName,
+                Email = user.Email ?? string.Empty,
+                PhoneNumber = user.PhoneNumber ?? string.Empty,
+                Gender = user.Gender.ToString(),
+                DateOfBirth = user.DateOfBirth.ToString("yyyy-MM-dd"),
+                ImageUrl = user.ImageUrl
+            };
+        }
+
+        /// <summary>
+        /// Updates the profile information of the currently authenticated doctor.
+        /// </summary>
+        public async Task UpdateMyProfileAsync(string userId, UpdateUserProfileDTO dto)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                throw new Exception("User not found.");
+
+            CultureInfo provider = new CultureInfo("en-US");
+            string[] formats = { "yyyy-MM-dd", "yyyy/MM/dd", "yyyy/M/dd", "yyyy/M/d", "yyyy/MM/d",
+                                  "dd/MM/yyyy", "dd/M/yyyy", "d/MM/yyyy", "d/M/yyyy" };
+
+            if (dto.ImageUrl != null && dto.ImageUrl.Length > 0)
+            {
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                var extension = Path.GetExtension(dto.ImageUrl.FileName).ToLowerInvariant();
+                if (!allowedExtensions.Contains(extension))
+                    throw new Exception("Only image files (jpg, jpeg, png, gif, webp) are allowed.");
+                if (dto.ImageUrl.Length > 5 * 1024 * 1024)
+                    throw new Exception("Image file size must not exceed 5 MB.");
+                var fileName = Guid.NewGuid().ToString() + extension;
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", fileName);
+                using var stream = new FileStream(filePath, FileMode.Create);
+                await dto.ImageUrl.CopyToAsync(stream);
+                user.ImageUrl = $"images/{fileName}";
+            }
+
+            user.FirstName = dto.FirstName;
+            user.LastName = dto.LastName;
+            user.FullName = $"{dto.FirstName} {dto.LastName}";
+            user.PhoneNumber = dto.PhoneNumber;
+            user.Gender = (Gender)dto.Gender;
+            user.DateOfBirth = DateTime.ParseExact(dto.DateOfBirth, formats, provider);
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                var errors = result.Errors.Select(e => e.Description);
+                throw new Exception($"Profile update failed: {string.Join(", ", errors)}");
+            }
         }
 
         public static int CalculateAge(DateTime? dateOfBirth)

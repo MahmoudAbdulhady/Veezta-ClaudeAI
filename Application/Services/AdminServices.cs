@@ -34,7 +34,7 @@ namespace Application.Services
         public async Task<bool> AddDocotorAsync(DoctorRegisterDTO model)
         {
             CultureInfo provider = new CultureInfo("en-US");
-            string[] formats = { "yyyy/MM/dd", "yyyy/M/dd", "yyyy/M/d", "yyyy/MM/d",
+            string[] formats = { "yyyy-MM-dd", "yyyy/MM/dd", "yyyy/M/dd", "yyyy/M/d", "yyyy/MM/d",
                                   "dd/MM/yyyy", "dd/M/yyyy", "d/MM/yyyy", "d/M/yyyy" };
 
             if (model.ImageUrl == null || model.ImageUrl.Length == 0)
@@ -81,15 +81,9 @@ namespace Application.Services
 
             await _userManager.AddToRoleAsync(user, AccountRole.Doctor.ToString());
 
-            // Send welcome email without exposing a hardcoded shared password
-            await SendWelcomeEmailToDoctorAsync(user.Email, model.Password);
-
             var specialization = await _specilizationRepository.GetByNameAsync(model.Specialization);
             if (specialization == null)
-            {
-                specialization = new Specialization { SpecializationName = model.Specialization };
-                await _specilizationRepository.AddAsync(specialization);
-            }
+                throw new Exception($"Specialization '{model.Specialization}' was not found. Please select a valid specialization.");
 
             var doctor = new Doctor
             {
@@ -99,6 +93,18 @@ namespace Application.Services
             };
 
             await _adminRepository.CreateNewDoctorAsync(doctor);
+
+            // Email is best-effort — a misconfigured SMTP server must not roll back a successful registration.
+            //try
+            //{
+            //    await SendWelcomeEmailToDoctorAsync(user.Email, model.Password);
+            //}
+            //catch
+            //{
+            //    // Email delivery failed. The doctor account was created successfully.
+            //    // Credentials can be shared with the doctor through another channel.
+            //}
+
             return true;
         }
 
@@ -310,6 +316,117 @@ namespace Application.Services
         public async Task<int> GetNumberOfDoctorsAddedLast24HoursAsync()
         {
             return await _adminRepository.GetNumberOfDoctorsAddedLast24HoursAsync();
+        }
+
+        /// <summary>
+        /// Returns the profile information of the currently authenticated admin.
+        /// </summary>
+        public async Task<UserProfileDTO> GetMyProfileAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                throw new Exception("User not found.");
+
+            return new UserProfileDTO
+            {
+                FullName = user.FullName,
+                Email = user.Email ?? string.Empty,
+                PhoneNumber = user.PhoneNumber ?? string.Empty,
+                Gender = user.Gender.ToString(),
+                DateOfBirth = user.DateOfBirth.ToString("yyyy-MM-dd"),
+                ImageUrl = user.ImageUrl
+            };
+        }
+
+        /// <summary>
+        /// Updates the profile information of the currently authenticated admin.
+        /// </summary>
+        public async Task UpdateMyProfileAsync(string userId, UpdateUserProfileDTO dto)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                throw new Exception("User not found.");
+
+            string[] formats = { "yyyy-MM-dd", "yyyy/MM/dd", "yyyy/M/dd", "yyyy/M/d", "yyyy/MM/d",
+                                  "dd/MM/yyyy", "dd/M/yyyy", "d/MM/yyyy", "d/M/yyyy" };
+            CultureInfo provider = new CultureInfo("en-US");
+
+            if (dto.ImageUrl != null && dto.ImageUrl.Length > 0)
+            {
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                var extension = Path.GetExtension(dto.ImageUrl.FileName).ToLowerInvariant();
+                if (!allowedExtensions.Contains(extension))
+                    throw new Exception("Only image files (jpg, jpeg, png, gif, webp) are allowed.");
+                if (dto.ImageUrl.Length > 5 * 1024 * 1024)
+                    throw new Exception("Image file size must not exceed 5 MB.");
+                var fileName = Guid.NewGuid().ToString() + extension;
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", fileName);
+                using var stream = new FileStream(filePath, FileMode.Create);
+                await dto.ImageUrl.CopyToAsync(stream);
+                user.ImageUrl = $"images/{fileName}";
+            }
+
+            user.FirstName = dto.FirstName;
+            user.LastName = dto.LastName;
+            user.FullName = $"{dto.FirstName} {dto.LastName}";
+            user.PhoneNumber = dto.PhoneNumber;
+            user.Gender = (Gender)dto.Gender;
+            user.DateOfBirth = DateTime.ParseExact(dto.DateOfBirth, formats, provider);
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                var errors = result.Errors.Select(e => e.Description);
+                throw new Exception($"Profile update failed: {string.Join(", ", errors)}");
+            }
+        }
+
+        /// <summary>
+        /// Returns all specializations ordered alphabetically.
+        /// </summary>
+        public async Task<IEnumerable<SpecializationDTO>> GetAllSpecializationsAsync()
+        {
+            var specializations = await _specilizationRepository.GetAllAsync();
+            return specializations.Select(s => new SpecializationDTO
+            {
+                SpecializationId   = s.SpecializationId,
+                SpecializationName = s.SpecializationName
+            });
+        }
+
+        /// <summary>
+        /// Adds a new specialization. Throws if the name already exists.
+        /// </summary>
+        public async Task<SpecializationDTO> AddSpecializationAsync(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new Exception("Specialization name cannot be empty.");
+
+            var existing = await _specilizationRepository.GetByNameAsync(name.Trim());
+            if (existing != null)
+                throw new Exception($"Specialization '{name}' already exists.");
+
+            var specialization = new Specialization { SpecializationName = name.Trim() };
+            await _specilizationRepository.AddAsync(specialization);
+
+            return new SpecializationDTO
+            {
+                SpecializationId   = specialization.SpecializationId,
+                SpecializationName = specialization.SpecializationName
+            };
+        }
+
+        /// <summary>
+        /// Deletes a specialization by ID. Throws if it has doctors assigned to it.
+        /// </summary>
+        public async Task<bool> DeleteSpecializationAsync(int id)
+        {
+            var specialization = await _specilizationRepository.GetByIdAsync(id);
+            if (specialization == null)
+                throw new Exception($"Specialization with ID {id} was not found.");
+
+            await _specilizationRepository.DeleteAsync(specialization);
+            return true;
         }
 
         /// <summary>

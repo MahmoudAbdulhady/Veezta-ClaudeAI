@@ -13,5 +13,9 @@ namespace Application.Contracts
 
         // New: resolves a Doctor table ID from an Identity user ID (used in controller JWT flow)
         Task<int?> GetDoctorIdByUserIdAsync(string userId);
+        Task<bool> DoctorRegisterAsync(DoctorRegisterDTO model);
+        Task<IEnumerable<SpecializationDTO>> GetSpecializationsAsync();
+        Task<UserProfileDTO> GetMyProfileAsync(string userId);
+        Task UpdateMyProfileAsync(string userId, UpdateUserProfileDTO dto);
     }
 }

@@ -15,7 +15,7 @@ namespace Application.Contracts
         Task<bool> CreateNewBookingAsync(int timeId, string patientId, string? couponName = null);
         Task<bool> CancelBookingAsync(int bookingId);
         Task<IEnumerable<PatientBookingDTO>> GetPatientSpecificBookingsAsync(string patientId);
-
-
+        Task<UserProfileDTO> GetMyProfileAsync(string userId);
+        Task UpdateMyProfileAsync(string userId, UpdateUserProfileDTO dto);
     }
 }

@@ -4,6 +4,7 @@ using Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Veezta.Controllers
 {
@@ -176,6 +177,70 @@ namespace Veezta.Controllers
         {
             int count = await _adminServices.GetNumberOfDoctorsAddedLast24HoursAsync();
             return Ok(new { DoctorsAddedLast24Hours = count });
+        }
+
+        /// <summary>
+        /// Returns the profile of the currently authenticated admin.
+        /// </summary>
+        [HttpGet("MyProfile")]
+        public async Task<IActionResult> GetMyProfile()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var profile = await _adminServices.GetMyProfileAsync(userId);
+            return Ok(profile);
+        }
+
+        /// <summary>
+        /// Returns all specializations (used to populate doctor-form dropdowns).
+        /// </summary>
+        [HttpGet("GetAllSpecializations")]
+        public async Task<IActionResult> GetAllSpecializations()
+        {
+            var result = await _adminServices.GetAllSpecializationsAsync();
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Adds a new specialization. Name must be unique.
+        /// </summary>
+        [HttpPost("AddSpecialization")]
+        public async Task<IActionResult> AddSpecialization([FromBody] string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest("Specialization name is required.");
+
+            var result = await _adminServices.AddSpecializationAsync(name);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Deletes a specialization by ID. Fails if doctors are assigned to it.
+        /// </summary>
+        [HttpDelete("DeleteSpecialization/{id:int}")]
+        public async Task<IActionResult> DeleteSpecialization(int id)
+        {
+            await _adminServices.DeleteSpecializationAsync(id);
+            return Ok($"Specialization with ID {id} deleted successfully.");
+        }
+
+        /// <summary>
+        /// Updates the profile of the currently authenticated admin.
+        /// </summary>
+        [HttpPut("UpdateProfile")]
+        public async Task<IActionResult> UpdateProfile([FromForm] UpdateUserProfileDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            await _adminServices.UpdateMyProfileAsync(userId, model);
+            return Ok("Profile updated successfully.");
         }
     }
 }

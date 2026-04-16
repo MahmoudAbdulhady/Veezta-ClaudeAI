@@ -38,7 +38,7 @@ namespace Application.Services
         public async Task<bool> RegisterPatientAsync(PatientRegisterDTO model)
         {
             CultureInfo provider = new CultureInfo("en-US");
-            string[] formats = { "yyyy/MM/dd", "yyyy/M/dd", "yyyy/M/d", "yyyy/MM/d",
+            string[] formats = { "yyyy-MM-dd", "yyyy/MM/dd", "yyyy/M/dd", "yyyy/M/d", "yyyy/MM/d",
                                   "dd/MM/yyyy", "dd/M/yyyy", "d/MM/yyyy", "d/M/yyyy" };
 
             // FIX: Only build imageUrl when an image is actually provided
@@ -100,18 +100,26 @@ namespace Application.Services
 
         /// <summary>
         /// Returns a paginated list of doctor appointment slots, grouped by doctor and day.
+        /// FIX: Returns an empty collection instead of throwing when no slots are found —
+        /// an empty result is a valid state on initial page load.
+        /// FIX: Pre-filters slots whose Doctor.Specialization is null before grouping,
+        /// preventing a NullReferenceException that occurred on unfiltered (no search term) loads.
         /// </summary>
         public async Task<(IEnumerable<AppointmentDTO>, int totalCount)> GetAppointmentsForDoctorAsync(PaginationAndSearchDTO request)
         {
             var (times, totalCount) = await _patientRepository.GetDoctorApptAsync(request);
-            if (times == null || !times.Any())
-                throw new Exception("No appointments were found.");
 
-            var doctorSchedules = times
+            if (times == null || !times.Any())
+                return (Enumerable.Empty<AppointmentDTO>(), 0);
+
+            // Secondary null guard: skip any slot that slipped through with a null Specialization
+            var validTimes = times.Where(t => t.Appointement?.Doctor?.Specialization != null).ToList();
+
+            var doctorSchedules = validTimes
                 .GroupBy(a => new
                 {
                     a.Appointement.Doctor.User.FullName,
-                    a.Appointement.Doctor.Specialization.SpecializationName,
+                    a.Appointement.Doctor.Specialization!.SpecializationName,
                     a.Appointement.Doctor.Price,
                     a.Appointement.Days
                 })
@@ -126,7 +134,11 @@ namespace Application.Services
                         {
                             Day = dayGroup.Key.ToString(),
                             TimeSlots = dayGroup
-                                .Select(a => $"{a.StartTime} TO {a.EndTime}")
+                                .Select(a => new TimeSlotInfoDTO
+                                {
+                                    Display       = $"{a.StartTime} TO {a.EndTime}",
+                                    AppointmentId = a.AppointmentId
+                                })
                                 .ToList()
                         })
                         .ToList()
@@ -226,6 +238,7 @@ namespace Application.Services
 
             return bookings.Select(t => new PatientBookingDTO
             {
+                BookingId = t.Appointement.Booking.BookingId,
                 DoctorName = t.Appointement.Doctor.User.FullName,
                 Specailization = t.Appointement.Doctor.Specialization.SpecializationName,
                 Price = t.Appointement.Doctor.Price.ToString(),
@@ -237,6 +250,69 @@ namespace Application.Services
                 EndTime = t.Appointement.Times.FirstOrDefault()?.EndTime,
                 BookingStatus = t.Appointement.Booking.Status.ToString()
             });
+        }
+
+        /// <summary>
+        /// Returns the profile information of the currently authenticated patient.
+        /// </summary>
+        public async Task<UserProfileDTO> GetMyProfileAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                throw new Exception("User not found.");
+
+            return new UserProfileDTO
+            {
+                FullName = user.FullName,
+                Email = user.Email ?? string.Empty,
+                PhoneNumber = user.PhoneNumber ?? string.Empty,
+                Gender = user.Gender.ToString(),
+                DateOfBirth = user.DateOfBirth.ToString("yyyy-MM-dd"),
+                ImageUrl = user.ImageUrl
+            };
+        }
+
+        /// <summary>
+        /// Updates the profile information of the currently authenticated patient.
+        /// </summary>
+        public async Task UpdateMyProfileAsync(string userId, UpdateUserProfileDTO dto)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                throw new Exception("User not found.");
+
+            CultureInfo provider = new CultureInfo("en-US");
+            string[] formats = { "yyyy-MM-dd", "yyyy/MM/dd", "yyyy/M/dd", "yyyy/M/d", "yyyy/MM/d",
+                                  "dd/MM/yyyy", "dd/M/yyyy", "d/MM/yyyy", "d/M/yyyy" };
+
+            if (dto.ImageUrl != null && dto.ImageUrl.Length > 0)
+            {
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                var extension = Path.GetExtension(dto.ImageUrl.FileName).ToLowerInvariant();
+                if (!allowedExtensions.Contains(extension))
+                    throw new Exception("Only image files (jpg, jpeg, png, gif, webp) are allowed.");
+                if (dto.ImageUrl.Length > 5 * 1024 * 1024)
+                    throw new Exception("Image file size must not exceed 5 MB.");
+                var fileName = Guid.NewGuid().ToString() + extension;
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", fileName);
+                using var stream = new FileStream(filePath, FileMode.Create);
+                await dto.ImageUrl.CopyToAsync(stream);
+                user.ImageUrl = $"images/{fileName}";
+            }
+
+            user.FirstName = dto.FirstName;
+            user.LastName = dto.LastName;
+            user.FullName = $"{dto.FirstName} {dto.LastName}";
+            user.PhoneNumber = dto.PhoneNumber;
+            user.Gender = (Gender)dto.Gender;
+            user.DateOfBirth = DateTime.ParseExact(dto.DateOfBirth, formats, provider);
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                var errors = result.Errors.Select(e => e.Description);
+                throw new Exception($"Profile update failed: {string.Join(", ", errors)}");
+            }
         }
     }
 }

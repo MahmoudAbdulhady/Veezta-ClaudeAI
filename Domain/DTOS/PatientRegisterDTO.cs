@@ -31,7 +31,7 @@ namespace Domain.DTOS
 
         [Phone]
         [Required]
-        [RegularExpression(@"^\+\d{1,3}\d{10}$", ErrorMessage = "Invalid phone number format. and max length is 11")]
+        [RegularExpression(@"^(\+?20)?01[0125]\d{8}$", ErrorMessage = "Phone number must be a valid Egyptian number (e.g. 01012345678 or +2001012345678).")]
         public string PhoneNumber { get; set; }
 
 

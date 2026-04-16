@@ -12,5 +12,7 @@ namespace Domain.Interfaces
         Task<Specialization> GetByIdAsync(int id);
         Task<Specialization> GetByNameAsync(string name);
         Task AddAsync(Specialization specialization);
+        Task<IEnumerable<Specialization>> GetAllAsync();
+        Task DeleteAsync(Specialization specialization);
     }
 }

@@ -5,6 +5,9 @@ namespace Application.Contracts
     public interface IAdminService
     {
         Task<bool> AddDocotorAsync(DoctorRegisterDTO model);
+        Task<IEnumerable<SpecializationDTO>> GetAllSpecializationsAsync();
+        Task<SpecializationDTO> AddSpecializationAsync(string name);
+        Task<bool> DeleteSpecializationAsync(int id);
         Task<DoctorDTO> GetDoctorByIdAsync(int doctorId);
         Task<bool> DeleteDoctorAsync(int doctorId);
         int GetTotalNumOfDoctors();
@@ -17,5 +20,7 @@ namespace Application.Contracts
         Task<IEnumerable<TopTenDoctorDTO>> GetTopTenDoctorsAsync();
         Task<RequestsDTO> GetNumberOfRequestsAsync();
         Task<int> GetNumberOfDoctorsAddedLast24HoursAsync();
+        Task<UserProfileDTO> GetMyProfileAsync(string userId);
+        Task UpdateMyProfileAsync(string userId, UpdateUserProfileDTO dto);
     }
 }

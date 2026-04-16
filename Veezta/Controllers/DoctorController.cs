@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Domain.Enums;
 
 namespace Veezta.Controllers
 {
@@ -49,6 +50,37 @@ namespace Veezta.Controllers
         }
 
         /// <summary>
+        /// Returns all available specializations. Anonymous — needed during doctor registration.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("GetSpecializations")]
+        public async Task<IActionResult> GetSpecializations()
+        {
+            var specializations = await _doctorService.GetSpecializationsAsync();
+            return Ok(specializations);
+        }
+
+        /// <summary>
+        /// Allows a doctor to self-register an account.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpPost("Register")]
+        public async Task<IActionResult> DoctorRegister([FromForm] DoctorRegisterDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            try
+            {
+                var result = await _doctorService.DoctorRegisterAsync(model);
+                return result ? Ok("Doctor registered successfully.") : BadRequest("Registration failed.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Returns paginated appointments booked with a specific doctor.
         /// FIX: Changed from POST to GET. DoctorId now taken from the JWT claim
         /// so a doctor can only see their own appointments.
@@ -82,6 +114,13 @@ namespace Veezta.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+
+            // Override DoctorId from JWT — prevent a doctor from spoofing another doctor's ID
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var doctorId = await _doctorService.GetDoctorIdByUserIdAsync(userId!);
+            if (doctorId == null)
+                return NotFound("No doctor record found for this account.");
+            model.DoctorId = doctorId.Value;
 
             await _doctorService.AddDoctorAppointmentAsync(model);
             return Ok("Appointment slots added successfully.");
@@ -126,6 +165,39 @@ namespace Veezta.Controllers
         {
             await _doctorService.DoctorConfirmCheckUpAsync(bookingId);
             return Ok($"Booking ID {bookingId} marked as completed.");
+        }
+
+        /// <summary>
+        /// Returns the profile of the currently authenticated doctor.
+        /// </summary>
+        [Authorize(Roles = "Doctor")]
+        [HttpGet("MyProfile")]
+        public async Task<IActionResult> GetMyProfile()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var profile = await _doctorService.GetMyProfileAsync(userId);
+            return Ok(profile);
+        }
+
+        /// <summary>
+        /// Updates the profile of the currently authenticated doctor.
+        /// </summary>
+        [Authorize(Roles = "Doctor")]
+        [HttpPut("UpdateProfile")]
+        public async Task<IActionResult> UpdateProfile([FromForm] UpdateUserProfileDTO model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            await _doctorService.UpdateMyProfileAsync(userId, model);
+            return Ok("Profile updated successfully.");
         }
     }
 }

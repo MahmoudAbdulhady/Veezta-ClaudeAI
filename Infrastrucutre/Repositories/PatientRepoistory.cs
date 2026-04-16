@@ -69,6 +69,9 @@ namespace Infrastrucutre.Repositories
 
         /// <summary>
         /// Returns a paginated list of available appointment time slots with doctor info.
+        /// Only includes slots where the Doctor has a valid Specialization — guards against
+        /// orphaned FK records that would cause a NullReferenceException in the service
+        /// grouping logic when no search term is provided.
         /// </summary>
         public async Task<(IEnumerable<Time>, int totalCounts)> GetDoctorApptAsync(PaginationAndSearchDTO request)
         {
@@ -77,6 +80,10 @@ namespace Infrastrucutre.Repositories
                 .Include(a => a.Appointement.Doctor)
                 .Include(a => a.Appointement.Doctor.User)
                 .Include(a => a.Appointement.Doctor.Specialization)
+                // FIX: exclude slots whose Doctor has no valid Specialization record.
+                // Without this, an unfiltered load returns all Time rows in-memory,
+                // and the service GroupBy crashes on null Specialization navigation.
+                .Where(t => t.Appointement.Doctor.Specialization != null)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(request.SearchTerm))
