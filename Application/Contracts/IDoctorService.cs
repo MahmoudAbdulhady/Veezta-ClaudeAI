@@ -1,3 +1,4 @@
+using Application.DTOS;
 using Domain.DTOS;
 
 namespace Application.Contracts
@@ -17,5 +18,6 @@ namespace Application.Contracts
         Task<IEnumerable<SpecializationDTO>> GetSpecializationsAsync();
         Task<UserProfileDTO> GetMyProfileAsync(string userId);
         Task UpdateMyProfileAsync(string userId, UpdateUserProfileDTO dto);
+        Task<IEnumerable<DoctorScheduleSlotDTO>> GetDoctorScheduleAsync(int doctorId);
     }
 }

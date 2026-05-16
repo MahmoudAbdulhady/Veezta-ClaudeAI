@@ -104,6 +104,19 @@ namespace Veezta.Controllers
             return Ok(new { appointments, totalCounts });
         }
 
+        [Authorize(Roles = "Doctor")]
+        [HttpGet("GetMySchedule")]
+        public async Task<IActionResult> GetMySchedule()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var doctorId = await _doctorService.GetDoctorIdByUserIdAsync(userId!);
+            if (doctorId == null)
+                return NotFound("No doctor record found for this account.");
+
+            var slots = await _doctorService.GetDoctorScheduleAsync(doctorId.Value);
+            return Ok(slots);
+        }
+
         /// <summary>
         /// Adds new appointment slots for a doctor.
         /// FIX: ModelState validation now happens before the service call.

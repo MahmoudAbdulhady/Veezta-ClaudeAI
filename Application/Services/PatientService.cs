@@ -166,9 +166,9 @@ namespace Application.Services
             if (appointmentTime == null)
                 throw new Exception($"Appointment with ID {appointmentId} was not found.");
 
-            var existingBooking = await _patientRepository.FindyBookingById(appointmentId);
-            if (existingBooking != null)
-                throw new Exception($"Appointment with ID {appointmentId} is already booked.");
+            var isBooked = await _patientRepository.HasActiveBookingForAppointment(appointmentId);
+            if (isBooked)
+                throw new Exception("This appointment slot is already booked.");
 
             var originalPrice = appointmentTime.Appointement.Doctor.Price;
             var priceAfterCoupon = originalPrice;
@@ -206,16 +206,32 @@ namespace Application.Services
                 await _couponRepository.MarkCouponAsUsed(patientId, coupon.CouponId);
             }
 
-            var newBooking = new Booking
+            // The Appointment<->Booking relationship is one-to-one with a unique FK on
+            // Booking.AppointmentId, so we can never insert a second row for the same slot.
+            // If a cancelled booking already exists for this slot, reactivate it instead.
+            var cancelledBooking = await _patientRepository.FindCancelledBookingByAppointmentId(appointmentTime.AppointmentId);
+            if (cancelledBooking != null)
             {
-                AppointmentId = appointmentTime.AppointmentId,
-                PatientId = patientId,
-                IsCouponUsed = isCouponUsed,
-                Price = (int)originalPrice,
-                PriceAfterCoupon = (int)priceAfterCoupon,
-            };
+                cancelledBooking.PatientId = patientId;
+                cancelledBooking.Status = BookingStatus.Pending;
+                cancelledBooking.IsCouponUsed = isCouponUsed;
+                cancelledBooking.Price = (int)originalPrice;
+                cancelledBooking.PriceAfterCoupon = (int)priceAfterCoupon;
+                await _patientRepository.UpdateBookingAsync(cancelledBooking);
+            }
+            else
+            {
+                var newBooking = new Booking
+                {
+                    AppointmentId = appointmentTime.AppointmentId,
+                    PatientId = patientId,
+                    IsCouponUsed = isCouponUsed,
+                    Price = (int)originalPrice,
+                    PriceAfterCoupon = (int)priceAfterCoupon,
+                };
+                await _patientRepository.CreateBookingAsync(newBooking);
+            }
 
-            await _patientRepository.CreateBookingAsync(newBooking);
             return true;
         }
 

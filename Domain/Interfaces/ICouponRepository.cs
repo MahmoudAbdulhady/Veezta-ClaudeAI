@@ -15,5 +15,7 @@ namespace Domain.Interfaces
         // FIX: new methods to support corrected coupon validation logic
         Task<bool> HasPatientUsedCoupon(string patientId, int couponId);
         Task MarkCouponAsUsed(string patientId, int couponId);
+        Task<IEnumerable<Coupon>> GetAllCouponsAsync();
+        Task<IEnumerable<Coupon>> GetActiveCouponsAsync();
     }
 }

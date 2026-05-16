@@ -68,6 +68,34 @@ namespace Infrastrucutre.Repositories
         }
 
         /// <summary>
+        /// Returns true if a Pending or Completed booking exists for the slot.
+        /// Cancelled bookings are excluded so the slot can be rebooked.
+        /// </summary>
+        public async Task<bool> HasActiveBookingForAppointment(int appointmentId)
+        {
+            return await _veeztaDbContext.Bookings
+                .AnyAsync(b => b.AppointmentId == appointmentId &&
+                               b.Status != BookingStatus.Canceled);
+        }
+
+        /// <summary>
+        /// Returns the cancelled booking for an appointment slot if one exists.
+        /// Used to reactivate rather than insert a second row (one-to-one FK constraint).
+        /// </summary>
+        public async Task<Booking?> FindCancelledBookingByAppointmentId(int appointmentId)
+        {
+            return await _veeztaDbContext.Bookings
+                .FirstOrDefaultAsync(b => b.AppointmentId == appointmentId &&
+                                          b.Status == BookingStatus.Canceled);
+        }
+
+        public async Task UpdateBookingAsync(Booking booking)
+        {
+            _veeztaDbContext.Bookings.Update(booking);
+            await _veeztaDbContext.SaveChangesAsync();
+        }
+
+        /// <summary>
         /// Returns a paginated list of available appointment time slots with doctor info.
         /// Only includes slots where the Doctor has a valid Specialization — guards against
         /// orphaned FK records that would cause a NullReferenceException in the service

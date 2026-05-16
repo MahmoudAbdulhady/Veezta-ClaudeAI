@@ -83,5 +83,17 @@ namespace Infrastrucutre.Repositories
             await _veeztaDbContext.SaveChangesAsync();
             return coupon;
         }
+
+        public async Task<IEnumerable<Coupon>> GetAllCouponsAsync()
+        {
+            return await _veeztaDbContext.Coupons.ToListAsync();
+        }
+
+        public async Task<IEnumerable<Coupon>> GetActiveCouponsAsync()
+        {
+            return await _veeztaDbContext.Coupons
+                .Where(c => c.IsActive)
+                .ToListAsync();
+        }
     }
 }

@@ -13,9 +13,8 @@ namespace Domain.DTOS
         [MaxLength(100)]
         public string LastName { get; set; }
 
-        [Phone]
         [Required(ErrorMessage = "PhoneNumber is required")]
-        [RegularExpression(@"^\+\d{1,3}\d{10}$", ErrorMessage = "Invalid phone number format.")]
+        [RegularExpression(@"^\+?[\d\s\-\(\)]{7,20}$", ErrorMessage = "Invalid phone number format.")]
         public string PhoneNumber { get; set; }
 
         [Required(ErrorMessage = "Gender is required")]

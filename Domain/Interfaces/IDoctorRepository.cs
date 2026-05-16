@@ -17,5 +17,8 @@ namespace Domain.Interfaces
 
         // New: resolves Doctor.DoctorId from Identity user ID
         Task<int?> GetDoctorIdByUserIdAsync(string userId);
+
+        // Returns all appointment slots for a doctor (booked and unbooked)
+        Task<IEnumerable<Appointement>> GetDoctorScheduleAsync(int doctorId);
     }
 }

@@ -19,15 +19,18 @@ namespace Veezta.Controllers
         private readonly IPatientService _patientService;
         private readonly UserManager<CustomUser> _userManager;
         private readonly TokenService _tokenService;
+        private readonly ICouponService _couponService;
 
         public PatientController(
             IPatientService patientService,
             UserManager<CustomUser> userManager,
-            TokenService tokenService)
+            TokenService tokenService,
+            ICouponService couponService)
         {
             _patientService = patientService;
             _userManager = userManager;
             _tokenService = tokenService;
+            _couponService = couponService;
         }
 
         /// <summary>
@@ -97,12 +100,19 @@ namespace Veezta.Controllers
             if (string.IsNullOrEmpty(patientId))
                 return Unauthorized();
 
-            await _patientService.CreateNewBookingAsync(
-                bookingModel.AppointmentId,
-                patientId,
-                bookingModel.CouponName);
+            try
+            {
+                await _patientService.CreateNewBookingAsync(
+                    bookingModel.AppointmentId,
+                    patientId,
+                    bookingModel.CouponName);
 
-            return Ok($"Appointment slot ID {bookingModel.AppointmentId} booked successfully.");
+                return Ok($"Appointment slot ID {bookingModel.AppointmentId} booked successfully.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         /// <summary>
@@ -164,6 +174,14 @@ namespace Veezta.Controllers
 
             await _patientService.UpdateMyProfileAsync(userId, model);
             return Ok("Profile updated successfully.");
+        }
+
+        [Authorize(Roles = "Patient")]
+        [HttpGet("GetActiveCoupons")]
+        public async Task<IActionResult> GetActiveCoupons()
+        {
+            var coupons = await _couponService.GetActiveCouponsAsync();
+            return Ok(coupons);
         }
     }
 }

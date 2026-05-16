@@ -9,6 +9,9 @@ namespace Domain.Interfaces
         Task<bool> CancelAppointment(int bookingId);
         Task<Booking> FindyBookingById(int bookingId);
         Task<bool> FindyBookingByAppoitmentId(int appointmentId);
+        Task<bool> HasActiveBookingForAppointment(int appointmentId);
+        Task<Booking?> FindCancelledBookingByAppointmentId(int appointmentId);
+        Task UpdateBookingAsync(Booking booking);
         Task<(IEnumerable<Time>, int totalCounts)> GetDoctorApptAsync(PaginationAndSearchDTO request);
 
         // FIX: replaces GetPatientBookings() — now filters by patientId in the DB

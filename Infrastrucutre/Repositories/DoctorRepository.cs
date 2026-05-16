@@ -242,5 +242,14 @@ namespace Infrastrucutre.Repositories
         {
             throw new NotImplementedException();
         }
+
+        public async Task<IEnumerable<Appointement>> GetDoctorScheduleAsync(int doctorId)
+        {
+            return await _veeztaDbContext.Appointments
+                .Include(a => a.Times)
+                .Include(a => a.Booking)
+                .Where(a => a.DoctorId == doctorId)
+                .ToListAsync();
+        }
     }
 }

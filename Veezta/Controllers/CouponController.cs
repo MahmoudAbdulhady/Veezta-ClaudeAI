@@ -20,6 +20,13 @@ namespace Veezta.Controllers
         /// <summary>
         /// Creates a new discount coupon.
         /// </summary>
+        [HttpGet("GetAllCoupons")]
+        public async Task<IActionResult> GetAllCoupons()
+        {
+            var coupons = await _couponService.GetAllCouponsAsync();
+            return Ok(coupons);
+        }
+
         [HttpPost("CreateCoupon")]
         public async Task<IActionResult> CreateCoupon([FromForm] CreateCouponDTO model)
         {

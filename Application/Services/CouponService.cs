@@ -123,5 +123,29 @@ namespace Application.Services
             await _couponRepository.UpdateCoupon(foundCoupon);
             return true;
         }
+
+        public async Task<IEnumerable<CouponResponseDTO>> GetAllCouponsAsync()
+        {
+            var coupons = await _couponRepository.GetAllCouponsAsync();
+            return coupons.Select(c => new CouponResponseDTO
+            {
+                CouponId = c.CouponId,
+                CouponName = c.CouponName,
+                Code = (int)c.Code,
+                IsActive = c.IsActive,
+            });
+        }
+
+        public async Task<IEnumerable<CouponResponseDTO>> GetActiveCouponsAsync()
+        {
+            var coupons = await _couponRepository.GetActiveCouponsAsync();
+            return coupons.Select(c => new CouponResponseDTO
+            {
+                CouponId = c.CouponId,
+                CouponName = c.CouponName,
+                Code = (int)c.Code,
+                IsActive = c.IsActive,
+            });
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿
 using Application.Contracts;
+using Application.DTOS;
 using Domain.DTOS;
 using Domain.Entities;
 using Domain.Enums;
@@ -77,13 +78,14 @@ namespace Application.Services
                 .Select(group => new DoctorBookingsDTO
             {
                 BookingId = group.Booking?.BookingId ?? 0,
-                PatientName = group.Booking?.Patient.FullName ?? "Unknown",
+                PatientName = group.Booking?.Patient?.FullName ?? "Unknown",
                 Age = CalculateAge(group.Booking?.Patient?.DateOfBirth).ToString() ?? "Unknown",
                 Day = group.Days.ToString(),
                 PhoneNumber = group.Booking?.Patient?.PhoneNumber ?? "Unknown",
                 StartTime = group.Times.FirstOrDefault()?.StartTime ?? "Unknown",
                 EndTime = group.Times.FirstOrDefault()?.EndTime ?? "Unknown",
-                Image = group.Booking?.Patient?.ImageUrl ?? "null" 
+                Image = group.Booking?.Patient?.ImageUrl ?? "null",
+                BookingStatus = group.Booking?.Status.ToString() ?? "Unknown"
 
             })
                 .ToList();
@@ -324,6 +326,19 @@ namespace Application.Services
                 var errors = result.Errors.Select(e => e.Description);
                 throw new Exception($"Profile update failed: {string.Join(", ", errors)}");
             }
+        }
+
+        public async Task<IEnumerable<DoctorScheduleSlotDTO>> GetDoctorScheduleAsync(int doctorId)
+        {
+            var appointments = await _doctorRepository.GetDoctorScheduleAsync(doctorId);
+            return appointments.Select(a => new DoctorScheduleSlotDTO
+            {
+                AppointmentId = a.AppointmentId,
+                Day = a.Days.ToString(),
+                StartTime = a.Times.FirstOrDefault()?.StartTime ?? "",
+                EndTime = a.Times.FirstOrDefault()?.EndTime ?? "",
+                IsBooked = a.Booking != null,
+            });
         }
 
         public static int CalculateAge(DateTime? dateOfBirth)

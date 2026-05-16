@@ -15,5 +15,7 @@ namespace Application.Contracts
          Task<bool>DeactivateCouponAsync(int couponId);
          Task<bool>DeleteCouponAsync(int couponId);
          Task<bool>UpdateCouponAsync(CouponUpdateDTO model);
+         Task<IEnumerable<CouponResponseDTO>> GetAllCouponsAsync();
+         Task<IEnumerable<CouponResponseDTO>> GetActiveCouponsAsync();
     }
 }
